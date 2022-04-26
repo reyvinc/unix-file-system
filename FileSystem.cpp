@@ -11,7 +11,7 @@
 
 #define ROOT 127
 #define NUM_INODES 126
-#define NUM_BLOCKS 128
+#define NUM_BLOCKS 16000
 #define MOUNT_ERROR() std::cerr << "Error: No file system is mounted\n"
 #define COMMAND_ERROR(file, line) std::cerr << "Command Error: " << file << ", " << line << std::endl
 #define FILE_NOT_EXIST(file) std::cerr << "Error: File or directory " << file <<" does not exist\n"
