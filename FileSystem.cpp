@@ -6,11 +6,6 @@
 #include <unordered_set>
 #include <vector>
 #include <algorithm>
-
-// #include <tic.h>
-#include <sstream>
-#include "FileSystem.h"
-
 //#include <tic.h>
 #include <sstream>
 #include "FileSystem.h"
@@ -29,7 +24,6 @@
 //    Inode inode[126];
 //} Super_block;
 
->>>>>>> a288e27348c35a37012fa69ab697db12fb9c4bb1
 #define ROOT 127
 #define NUM_INODES 126
 #define NUM_BLOCKS 16000
@@ -454,11 +448,7 @@ void fs_create(char name[5], int size) {
     if (size == 0)
     {
         strncpy_s(inode.name, str_name.c_str(), 5);
-<<<<<<< HEAD
-        inode.used_size =  0x80;
-=======
         inode.used_size = 0x80;
->>>>>>> a288e27348c35a37012fa69ab697db12fb9c4bb1
         inode.start_block = 0;
         inode.dir_parent = 0x80 | current_directory_int;
 
@@ -885,13 +875,8 @@ void run_commands(std::string input_file) {
                 continue;
             }
 
-<<<<<<< HEAD
-            char buff[1024] = {0};
-            std::strcpy_s(buff, in .c_str());
-=======
             char buff[1024] = { 0 };
             strcpy_s(buff, in.c_str());
->>>>>>> a288e27348c35a37012fa69ab697db12fb9c4bb1
             fs_buff(buff);
         }
         else if (!cmd.compare("L")) {
