@@ -6,15 +6,11 @@
 #include <unordered_set>
 #include <vector>
 #include <algorithm>
-<<<<<<< HEAD
+
 // #include <tic.h>
 #include <sstream>
 #include "FileSystem.h"
-<<<<<<< HEAD
 
-=======
->>>>>>> 1a4d263045349300425f30f17d92e74a58aee225
-=======
 //#include <tic.h>
 #include <sstream>
 #include "FileSystem.h"
