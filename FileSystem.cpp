@@ -5,9 +5,25 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-#include <tic.h>
+#include <algorithm>
+//#include <tic.h>
 #include <sstream>
 #include "FileSystem.h"
+
+//using namespace std;
+
+//typedef struct {
+//    char name[5];        // Name of the file or directory
+//    uint8_t used_size;   // Inode state and the size of the file or directory
+//    uint8_t start_block; // Index of the start file block
+//    uint8_t dir_parent;  // Inode mode and the index of the parent inode
+//} Inode;
+//
+//typedef struct {
+//    char free_block_list[16];
+//    Inode inode[126];
+//} Super_block;
+
 #define ROOT 127
 #define NUM_INODES 126
 #define NUM_BLOCKS 16000
@@ -18,17 +34,17 @@
 
 bool mounted = false;
 char buffer[1024];
-Super_block *superblock;
+Super_block* superblock;
 uint8_t current_directory_int = ROOT;    // start as root
 std::string current_disk;
-char zeros[1024] = {0};
+char zeros[1024] = { 0 };
 
-inline bool file_exists(char *name) {
+inline bool file_exists(char* name) {
     struct stat buffer;
     return (stat(name, &buffer) == 0);
 }
 
-inline bool block_marked_free(Super_block *sb, int index) {
+inline bool block_marked_free(Super_block* sb, int index) {
     uint8_t val = index % 8;
     uint8_t mask = 1 << (7 - val);
     return !(sb->free_block_list[index / 8] & mask);
@@ -47,8 +63,8 @@ void set_block_used(int index) {
     superblock->free_block_list[index / 8] |= mask;
 }
 
-std::string &trim(std::string &str) {
-    const std::string &chars = "\t\n\v\f\r ";
+std::string& trim(std::string& str) {
+    const std::string& chars = "\t\n\v\f\r ";
     str.erase(str.find_last_not_of(chars) + 1);
     str.erase(0, str.find_first_not_of(chars));
     return str;
@@ -69,15 +85,15 @@ void set_block_range_free(uint8_t start, uint8_t end) {
 }
 
 
-uint8_t get_node_size(Inode &inode) {
+uint8_t get_node_size(Inode& inode) {
     return inode.used_size & 0x7f;
 }
 
-inline bool node_in_use(Inode &inode) {
+inline bool node_in_use(Inode& inode) {
     return inode.used_size & 0x80;
 }
 
-inline bool is_directory(Inode &inode) {
+inline bool is_directory(Inode& inode) {
     return inode.dir_parent & 0x80;
 }
 
@@ -86,7 +102,7 @@ uint8_t get_parent_node_index(Inode inode) {
 }
 
 struct cmp_nodes {
-    inline bool operator()(const int &first, const int &second) {
+    inline bool operator()(const int& first, const int& second) {
         return (superblock->inode[first].start_block < superblock->inode[second].start_block);
     }
 };
@@ -95,17 +111,17 @@ Inode get_parent_node(Inode inode) {
     return superblock->inode[get_parent_node_index(inode)];
 }
 
-inline bool all_bytes_zero(Inode &inode) {
+inline bool all_bytes_zero(Inode& inode) {
     return inode.dir_parent == 0 && inode.used_size == 0 && inode.start_block == 0
-                && inode.name[0] == 0 && inode.name[1] == 0 && inode.name[2] == 0
-                && inode.name[3] == 0 && inode.name[4] == 0;
+        && inode.name[0] == 0 && inode.name[1] == 0 && inode.name[2] == 0
+        && inode.name[3] == 0 && inode.name[4] == 0;
 }
 
-bool operator==(Inode const & lhs, Inode const & rhs) {
+bool operator==(Inode const& lhs, Inode const& rhs) {
     return get_parent_node_index(lhs) == get_parent_node_index(rhs) && strncmp(lhs.name, rhs.name, 5) == 0;
 }
 
-int consistency_check(Super_block *sb) {
+int consistency_check(Super_block* sb) {
     /*
      * Blocks that are marked free in the free-space list cannot be allocated to any file. Similarly, blocks
      * marked in use in the free-space list must be allocated to exactly one file.
@@ -131,11 +147,11 @@ int consistency_check(Super_block *sb) {
     }
 
     // checks all blocks marked as used are actually used
-    for (int i = 1; i < NUM_BLOCKS; i++){
-        if (block_marked_free(sb, i) && allocated_blocks.find(i) != allocated_blocks.end()){
+    for (int i = 1; i < NUM_BLOCKS; i++) {
+        if (block_marked_free(sb, i) && allocated_blocks.find(i) != allocated_blocks.end()) {
             return 1;
         }
-        if (!block_marked_free(sb, i) && allocated_blocks.find(i) == allocated_blocks.end()){
+        if (!block_marked_free(sb, i) && allocated_blocks.find(i) == allocated_blocks.end()) {
             return 1;
         }
     }
@@ -203,7 +219,7 @@ int consistency_check(Super_block *sb) {
         if (parent_idx == ROOT) continue;
 
         Inode parent = get_parent_node(inode);
-        if (parent_idx < 0 || parent_idx > 125 ||!node_in_use(parent) || !is_directory(parent)) {
+        if (parent_idx < 0 || parent_idx > 125 || !node_in_use(parent) || !is_directory(parent)) {
             return 6;
         }
     }
@@ -240,7 +256,7 @@ void write_superblock() {
     file.seekp(0, std::ios::beg);
 
     file.write(superblock->free_block_list, 16);
-    file.write((char *) &superblock->inode, sizeof(superblock->inode));
+    file.write((char*)&superblock->inode, sizeof(superblock->inode));
 
     file.close();
 }
@@ -264,7 +280,7 @@ void move_data(uint8_t old_start, uint8_t new_start, uint8_t size) {
     file.close();
 }
 
-void delete_file(Inode &inode) {
+void delete_file(Inode& inode) {
     int idx = get_node_index(inode);
     int size = get_node_size(inode);
 
@@ -272,7 +288,7 @@ void delete_file(Inode &inode) {
 
     std::fstream file(current_disk, std::ios::binary | std::ios::in | std::ios::out);
 
-    for (uint8_t i = inode.start_block; i < inode.start_block + size; i++){
+    for (uint8_t i = inode.start_block; i < inode.start_block + size; i++) {
         file.seekp(1024 * i);
         file.write(zeros, 1024);
     }
@@ -300,7 +316,8 @@ void delete_directory(Inode inode) {
     for (unsigned int i = 0; i < nodes_to_delete.size(); i++) {
         if (is_directory(nodes_to_delete[i])) {
             delete_directory(nodes_to_delete[i]);
-        } else {
+        }
+        else {
             delete_file(nodes_to_delete[i]);
         }
     }
@@ -341,7 +358,8 @@ int find_contiguous_blocks(int size) {
             if (start == -1) {
                 start = i;
             }
-        } else {
+        }
+        else {
             found_so_far = 0;
             start = -1;
         }
@@ -353,14 +371,14 @@ int find_contiguous_blocks(int size) {
     return start;
 }
 
-void fs_mount(char *new_disk_name) {
+void fs_mount(char* new_disk_name) {
     // check if the virtual disk exists
     if (!file_exists(new_disk_name)) {
         std::cerr << "Error: Cannot find disk " << std::string(new_disk_name) << std::endl;
         return;
     }
 
-    Super_block *sb = new Super_block;
+    Super_block* sb = new Super_block;
     std::fstream file(new_disk_name, std::ios::in | std::ios::out | std::ios::binary);
 
     if (!file.good()) {
@@ -375,9 +393,9 @@ void fs_mount(char *new_disk_name) {
         file.read(sb->inode[i].name, 5);
         char rest_of_node[3];
         file.read(rest_of_node, 3);
-        sb->inode[i].used_size = (uint8_t) rest_of_node[0];
-        sb->inode[i].start_block = (uint8_t) rest_of_node[1];
-        sb->inode[i].dir_parent = (uint8_t) rest_of_node[2];
+        sb->inode[i].used_size = (uint8_t)rest_of_node[0];
+        sb->inode[i].start_block = (uint8_t)rest_of_node[1];
+        sb->inode[i].dir_parent = (uint8_t)rest_of_node[2];
     }
 
     file.close();
@@ -429,8 +447,8 @@ void fs_create(char name[5], int size) {
     // check if directory
     if (size == 0)
     {
-        strncpy(inode.name, str_name.c_str(), 5);
-        inode.used_size =  0x80;
+        strncpy_s(inode.name, str_name.c_str(), 5);
+        inode.used_size = 0x80;
         inode.start_block = 0;
         inode.dir_parent = 0x80 | current_directory_int;
 
@@ -448,7 +466,8 @@ void fs_create(char name[5], int size) {
             if (start == -1) {
                 start = i;
             }
-        } else {
+        }
+        else {
             found_so_far = 0;
             start = -1;
         }
@@ -465,9 +484,9 @@ void fs_create(char name[5], int size) {
 
     set_block_range_used(start, start + size);
 
-    strncpy(inode.name, str_name.c_str(), 5);
+    strncpy_s(inode.name, str_name.c_str(), 5);
     inode.used_size = 0x80 | size;
-    inode.start_block = (uint8_t) start;
+    inode.start_block = (uint8_t)start;
     inode.dir_parent = current_directory_int;
 
     superblock->inode[idx] = inode;
@@ -492,7 +511,8 @@ void fs_delete(char name[5]) {
 
     if (is_directory(inode)) {
         delete_directory(inode);
-    } else {
+    }
+    else {
         delete_file(inode);
     }
 
@@ -572,14 +592,15 @@ void fs_ls(void) {
     Inode inode;
     if (current_directory_int != ROOT) inode = superblock->inode[current_directory_int];
 
-    printf("%-5.5s %3d\n", ".", (int) get_num_children(current_directory_int));
-    printf("%-5.5s %3d\n", "..", (int) get_parent_num_children(current_directory_int));
+    printf("%-5.5s %3d\n", ".", (int)get_num_children(current_directory_int));
+    printf("%-5.5s %3d\n", "..", (int)get_parent_num_children(current_directory_int));
 
     for (int i = 0; i < NUM_INODES; i++) {
         if (get_parent_node_index(superblock->inode[i]) == current_directory_int) {
             if (is_directory(superblock->inode[i])) {
                 printf("%-5.5s %3d\n", superblock->inode[i].name, get_num_children(i));
-            } else {
+            }
+            else {
                 printf("%-5.5s %3d KB\n", superblock->inode[i].name, get_node_size(superblock->inode[i]));
             }
         }
@@ -602,13 +623,13 @@ void fs_resize(char name[5], int new_size) {
     }
 
     Inode inode = superblock->inode[idx];
-    int size =  get_node_size(inode);
+    int size = get_node_size(inode);
     std::fstream file(current_disk, std::ios::binary | std::ios::in | std::ios::out);
 
     if (new_size < size) {
         set_block_range_free(inode.start_block + new_size, inode.start_block + size);
 
-        for (uint8_t i = inode.start_block + new_size; i < inode.start_block + size; i++){
+        for (uint8_t i = inode.start_block + new_size; i < inode.start_block + size; i++) {
             file.seekp(1024 * i);
             file.write(zeros, 1024);
         }
@@ -634,7 +655,8 @@ void fs_resize(char name[5], int new_size) {
         superblock->inode[idx] = inode;
 
         set_block_range_used(inode.start_block, inode.start_block + new_size);
-    } else {
+    }
+    else {
         bool found = false;
         int found_so_far = 0;
         int start = -1;
@@ -644,7 +666,8 @@ void fs_resize(char name[5], int new_size) {
                 if (start == -1) {
                     start = i;
                 }
-            } else {
+            }
+            else {
                 found_so_far = 0;
                 start = -1;
             }
@@ -738,7 +761,7 @@ void fs_cd(char name[5]) {
 
     int idx = get_node_index(name, current_directory_int);
     if (idx == -1) {
-        std::cerr << "Error: Directory "<< dir << " does not exist\n";
+        std::cerr << "Error: Directory " << dir << " does not exist\n";
         return;
     }
 
@@ -765,8 +788,9 @@ void run_commands(std::string input_file) {
                 continue;
             }
 
-            fs_mount((char * ) disk_name.c_str());
-        } else if (!cmd.compare("C")) {
+            fs_mount((char*)disk_name.c_str());
+        }
+        else if (!cmd.compare("C")) {
             std::string file_name;
             int size;
             iss >> file_name >> size;
@@ -782,8 +806,9 @@ void run_commands(std::string input_file) {
                 continue;
             }
 
-            fs_create((char * ) file_name.c_str(), size);
-        } else if (!cmd.compare("D")) {
+            fs_create((char*)file_name.c_str(), size);
+        }
+        else if (!cmd.compare("D")) {
             std::string file_name;
             iss >> file_name;
 
@@ -798,8 +823,9 @@ void run_commands(std::string input_file) {
                 continue;
             }
 
-            fs_delete((char * ) file_name.c_str());
-        } else if (!cmd.compare("R")) {
+            fs_delete((char*)file_name.c_str());
+        }
+        else if (!cmd.compare("R")) {
             std::string file_name;
             int block_num;
             iss >> file_name >> block_num;
@@ -815,8 +841,9 @@ void run_commands(std::string input_file) {
                 continue;
             }
 
-            fs_read((char * ) file_name.c_str(), block_num);
-        } else if (!cmd.compare("W")) {
+            fs_read((char*)file_name.c_str(), block_num);
+        }
+        else if (!cmd.compare("W")) {
             std::string file_name;
             int block_num;
             iss >> file_name >> block_num;
@@ -832,8 +859,9 @@ void run_commands(std::string input_file) {
                 continue;
             }
 
-            fs_write((char * ) file_name.c_str(), block_num);
-        } else if (!cmd.compare("B")) {
+            fs_write((char*)file_name.c_str(), block_num);
+        }
+        else if (!cmd.compare("B")) {
             std::string word;
             iss >> word;
             if (line.length() < 3 || !word.length()) {
@@ -842,22 +870,24 @@ void run_commands(std::string input_file) {
             }
 
             std::string in = line.substr(2);
-            if ( in.length() > 1000) {
+            if (in.length() > 1000) {
                 COMMAND_ERROR(input_file, line_number);
                 continue;
             }
 
-            char buff[1024] = {0};
-            std::strcpy(buff, in .c_str());
+            char buff[1024] = { 0 };
+            strcpy_s(buff, in.c_str());
             fs_buff(buff);
-        } else if (!cmd.compare("L")) {
+        }
+        else if (!cmd.compare("L")) {
             if (!iss.eof()) {
                 COMMAND_ERROR(input_file, line_number);
                 continue;
             }
 
             fs_ls();
-        } else if (!cmd.compare("E")) {
+        }
+        else if (!cmd.compare("E")) {
             std::string file_name;
             int new_size;
             iss >> file_name >> new_size;
@@ -873,15 +903,17 @@ void run_commands(std::string input_file) {
                 continue;
             }
 
-            fs_resize((char * ) file_name.c_str(), new_size);
-        } else if (!cmd.compare("O")) {
+            fs_resize((char*)file_name.c_str(), new_size);
+        }
+        else if (!cmd.compare("O")) {
             if (!iss.eof()) {
                 COMMAND_ERROR(input_file, line_number);
                 continue;
             }
 
             fs_defrag();
-        } else if (!cmd.compare("Y")) {
+        }
+        else if (!cmd.compare("Y")) {
             std::string file_name;
             iss >> file_name;
 
@@ -896,13 +928,13 @@ void run_commands(std::string input_file) {
                 continue;
             }
 
-            fs_cd((char * ) file_name.c_str());
+            fs_cd((char*)file_name.c_str());
         }
         write_superblock();
     }
 }
 
-int main (int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
     run_commands(std::string("/Users/ahmed/CLionProjects/untitled/consistency-input"));
     return 0;
 }
