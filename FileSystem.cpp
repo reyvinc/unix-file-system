@@ -5,10 +5,11 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-#include <tic.h>
+#include <algorithm>
+// #include <tic.h>
 #include <sstream>
 #include "FileSystem.h"
-//check
+
 #define ROOT 127
 #define NUM_INODES 126
 #define NUM_BLOCKS 16000
@@ -430,7 +431,7 @@ void fs_create(char name[5], int size) {
     // check if directory
     if (size == 0)
     {
-        strncpy(inode.name, str_name.c_str(), 5);
+        strncpy_s(inode.name, str_name.c_str(), 5);
         inode.used_size =  0x80;
         inode.start_block = 0;
         inode.dir_parent = 0x80 | current_directory_int;
@@ -466,7 +467,7 @@ void fs_create(char name[5], int size) {
 
     set_block_range_used(start, start + size);
 
-    strncpy(inode.name, str_name.c_str(), 5);
+    strncpy_s(inode.name, str_name.c_str(), 5);
     inode.used_size = 0x80 | size;
     inode.start_block = (uint8_t) start;
     inode.dir_parent = current_directory_int;
@@ -849,7 +850,7 @@ void run_commands(std::string input_file) {
             }
 
             char buff[1024] = {0};
-            std::strcpy(buff, in .c_str());
+            std::strcpy_s(buff, in .c_str());
             fs_buff(buff);
         } else if (!cmd.compare("L")) {
             if (!iss.eof()) {
