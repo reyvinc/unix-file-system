@@ -9,7 +9,10 @@
 // #include <tic.h>
 #include <sstream>
 #include "FileSystem.h"
+<<<<<<< HEAD
 
+=======
+>>>>>>> 1a4d263045349300425f30f17d92e74a58aee225
 #define ROOT 127
 #define NUM_INODES 126
 #define NUM_BLOCKS 16000
