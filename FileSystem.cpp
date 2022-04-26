@@ -8,7 +8,6 @@
 #include <tic.h>
 #include <sstream>
 #include "FileSystem.h"
-//check
 #define ROOT 127
 #define NUM_INODES 126
 #define NUM_BLOCKS 16000
